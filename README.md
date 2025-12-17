@@ -4,12 +4,13 @@ A TypeScript CLI tool that automatically generates Dart models from Firestore co
 
 ## Features
 
+- 🎮 **Interactive Mode**: Guided CLI experience with collection selection
 - 🔥 Connects directly to Firebase Firestore
 - 📊 Analyzes real documents to infer field types
 - 🎯 Generates clean Dart models with `fromJson`/`toJson`
 - 🔍 Detects optional and nullable fields automatically
-- 📦 **Batch mode: Extract multiple collections from YAML config**
-- 🌳 Supports subcollections for each collection
+- ✅ **Multiple selection**: Choose multiple collections at once with checkboxes
+- 🌳 **Auto-discovery**: Automatically detects and offers subcollections
 - 🎨 **Auto-formats generated code with `dart format`**
 - ⚡ Fast and easy to use
 
@@ -40,17 +41,17 @@ npm install --save-dev firestore-dart-generator
    npm install -g firestore-dart-generator
    ```
 
-2. **Create `collections.yaml`**:
-   ```yaml
-   collections:
-     - name: users
-       output: ./lib/src/models
+2. **Run interactively**:
+   ```bash
+   firestore-dart-gen --service-account firebase_service_account.json
    ```
 
-3. **Run**:
-   ```bash
-   firestore-dart-gen batch --service-account firebase_service_account.json
-   ```
+3. **Follow the prompts**:
+   - ✨ View your Firebase project name
+   - ✅ Select collections with checkboxes (Space to select, Enter to confirm)
+   - 🌳 Choose whether to include subcollections (auto-detected)
+   - 📁 Configure output directory and sample size
+   - 🎯 Review summary and confirm
 
 Done! Your Dart models are generated.
 
@@ -86,7 +87,86 @@ Or use the `--service-account` and `--project-id` flags when running the command
 
 ## Usage
 
-### Batch Mode (Recommended) 🎯
+### Interactive Mode (Default) 🎮
+
+The tool runs in interactive mode by default, providing a guided experience:
+
+**Features:**
+- 🔍 **Auto-discovery**: Automatically lists all collections in your project
+- ✅ **Multiple selection**: Use checkboxes to select multiple collections at once
+- 🌳 **Subcollection detection**: Automatically finds and offers to include subcollections
+- ⚙️ **Easy configuration**: Configure output directory and sample size with prompts
+- 📊 **Summary review**: See exactly what will be generated before confirming
+
+**Run the interactive mode:**
+
+```bash
+firestore-dart-gen --service-account firebase_service_account.json
+```
+
+**Example Session:**
+
+```
+🔥 Firestore Dart Generator - Interactive Mode
+
+✓ Connected to Firebase Project: my-awesome-app
+
+🔍 Discovering collections...
+
+Found 5 collection(s)
+
+? Select collections to generate models for: (Use arrow keys, Space to select, Enter to confirm)
+❯◯ users
+ ◯ products
+ ◯ orders
+ ◯ reviews
+ ◯ settings
+
+🌳 Checking for subcollections...
+
+  Analyzing users...
+  Found 2 subcollection(s): profiles, settings
+  Include subcollections for users? (Y/n) Yes
+
+? Output directory for generated Dart files: ./lib/src/models
+? Number of documents to sample per collection: 20
+
+📋 Generation Summary:
+────────────────────────────────────────────────────────────
+  Firebase Project: my-awesome-app
+  Collections: users, products
+  Subcollections:
+    └─ users: profiles, settings
+  Output: ./lib/src/models
+  Sample Size: 20 documents per collection
+────────────────────────────────────────────────────────────
+
+? Generate Dart models with these settings? (Y/n) Yes
+
+🚀 Starting generation...
+
+📦 Processing collection: users
+...
+
+✨ Success! Generated 4 model(s)
+
+Generated files:
+  ✓ lib/src/models/user_dto.dart
+  ✓ lib/src/models/profile_dto.dart
+  ✓ lib/src/models/setting_dto.dart
+  ✓ lib/src/models/product_dto.dart
+
+📚 Next steps:
+  1. Review the generated files
+  2. Import the models in your Dart code
+  3. Add 'equatable' to your pubspec.yaml if not already present
+```
+
+## Legacy Usage (Advanced)
+
+### Batch Mode (Legacy)
+
+*Note: Interactive mode is now recommended for most use cases.*
 
 Extract multiple collections using a YAML configuration file:
 
@@ -113,9 +193,11 @@ firestore-dart-gen batch --service-account firebase_service_account.json
 
 That's it! All collections in the YAML file will be processed.
 
-### Single Collection Mode
+### Single Collection Mode (Legacy)
 
-Extract one collection at a time:
+*Note: Interactive mode is now recommended for most use cases.*
+
+For programmatic use or CI/CD, you can still extract collections using the old commands (requires custom wrapper):
 
 ```bash
 firestore-dart-gen single \
@@ -136,7 +218,14 @@ firestore-dart-gen single \
 
 ## Command Line Options
 
-### Batch Mode
+### Interactive Mode (Default)
+
+| Option | Required | Description | Default |
+|--------|----------|-------------|---------|
+| `--service-account <path>` | No | Path to service account JSON | From env |
+| `--project-id <id>` | No | Firebase project ID | From env |
+
+### Batch Mode (Legacy)
 
 | Option | Alias | Required | Description | Default |
 |--------|-------|----------|-------------|---------|

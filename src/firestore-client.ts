@@ -187,6 +187,45 @@ export class FirestoreClient {
   }
 
   /**
+   * List all root-level collections in the database
+   */
+  async listCollections(): Promise<string[]> {
+    if (!this.db) {
+      throw new Error('Firestore not initialized');
+    }
+    
+    const collections = await this.db.listCollections();
+    return collections.map(col => col.id);
+  }
+
+  /**
+   * List subcollections for a given collection (by checking first document)
+   */
+  async listSubcollections(collectionPath: string): Promise<string[]> {
+    if (!this.db) {
+      throw new Error('Firestore not initialized');
+    }
+    
+    // Get first document to check subcollections
+    const snapshot = await this.db.collection(collectionPath).limit(1).get();
+    
+    if (snapshot.empty) {
+      return [];
+    }
+    
+    const doc = snapshot.docs[0];
+    const subcollections = await doc.ref.listCollections();
+    return subcollections.map(col => col.id);
+  }
+
+  /**
+   * Get project ID from initialized Firebase app
+   */
+  getProjectId(): string | undefined {
+    return admin.app().options.projectId;
+  }
+
+  /**
    * Close Firebase connection
    */
   async close(): Promise<void> {

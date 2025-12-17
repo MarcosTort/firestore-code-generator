@@ -50,3 +50,14 @@ export interface ConfigFile {
   collections: CollectionConfig[];
 }
 
+export interface InteractiveOptions {
+  serviceAccount?: string;
+  projectId?: string;
+}
+
+export interface CollectionSelection {
+  name: string;
+  includeSubcollections: boolean;
+  subcollections: string[];
+}
+
