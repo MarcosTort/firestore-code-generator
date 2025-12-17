@@ -80,9 +80,28 @@ export async function runInteractiveCLI(
   } catch (error) {
     console.error(chalk.red('\n✗ Failed to connect to Firebase'));
     console.error(chalk.yellow('\nPossible solutions:'));
-    console.error(chalk.gray('  1. Check your service account file path'));
-    console.error(chalk.gray('  2. Verify your Firebase project ID'));
-    console.error(chalk.gray('  3. Ensure service account has read permissions\n'));
+    
+    // Check if config file exists
+    const configExists = ConfigFileLoader.loadConfig(configPath) !== null;
+    
+    if (!configExists && !resolvedServiceAccount) {
+      console.error(chalk.cyan('\n📄 Option 1: Create a config file'));
+      console.error(chalk.gray('   Create firestore-dart-gen.yaml:'));
+      console.error(chalk.gray('   firebase:'));
+      console.error(chalk.gray('     serviceAccount: ./firebase_service_account.json\n'));
+      console.error(chalk.cyan('   Or copy from example:'));
+      console.error(chalk.gray('   cp firestore-dart-gen.example.yaml firestore-dart-gen.yaml\n'));
+    }
+    
+    console.error(chalk.cyan('🔧 Option 2: Use CLI arguments'));
+    console.error(chalk.gray('   firestore-dart-gen --service-account ./firebase_service_account.json\n'));
+    
+    console.error(chalk.cyan('🌍 Option 3: Set environment variable'));
+    console.error(chalk.gray('   export GOOGLE_APPLICATION_CREDENTIALS=./firebase_service_account.json\n'));
+    
+    console.error(chalk.yellow('Other checks:'));
+    console.error(chalk.gray('  - Verify your service account file path is correct'));
+    console.error(chalk.gray('  - Ensure service account has read permissions\n'));
     throw error;
   }
   
