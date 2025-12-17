@@ -1,6 +1,6 @@
 {
   "name": "firestore-dart-generator",
-  "version": "1.0.0-beta.1",
+  "version": "1.0.0",
   "description": "Generate Dart models from Firestore collections by analyzing real document schemas",
   "main": "dist/index.js",
   "bin": {
