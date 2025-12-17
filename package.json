@@ -1,0 +1,51 @@
+{
+  "name": "firestore-dart-generator",
+  "version": "1.0.0",
+  "description": "Generate Dart models from Firestore collections by analyzing real document schemas",
+  "main": "dist/index.js",
+  "bin": {
+    "firestore-dart-gen": "dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc && npm run copy-templates",
+    "copy-templates": "mkdir -p dist/templates && cp src/templates/*.hbs dist/templates/",
+    "extract": "node dist/index.js batch",
+    "extract:single": "node dist/index.js single",
+    "dev": "ts-node src/index.ts batch",
+    "dev:single": "ts-node src/index.ts single",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": [
+    "firestore",
+    "dart",
+    "flutter",
+    "code-generation",
+    "firebase",
+    "schema",
+    "models",
+    "typescript",
+    "generator",
+    "cli"
+  ],
+  "author": "Marcos Tort",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": ""
+  },
+  "dependencies": {
+    "firebase-admin": "^12.0.0",
+    "commander": "^12.0.0",
+    "handlebars": "^4.7.8",
+    "chalk": "^4.1.2",
+    "dotenv": "^16.4.0",
+    "js-yaml": "^4.1.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "@types/js-yaml": "^4.0.9",
+    "typescript": "^5.3.3",
+    "ts-node": "^10.9.2"
+  }
+}
+

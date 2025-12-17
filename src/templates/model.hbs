@@ -1,0 +1,39 @@
+/// A model representing a {{collectionName}} document from Firestore.
+class {{className}} extends Equatable {
+  /// Creates a new [{{className}}] instance.
+  const {{className}}({{#if fields.length}}{
+{{#each fields}}
+    {{#unless isOptional}}required {{/unless}}this.{{name}},
+{{/each}}
+  }{{/if}});
+
+  /// Creates a [{{className}}] from a JSON map.
+  factory {{className}}.fromJson(Map<String, dynamic> json) {
+    return {{className}}({{#if fields.length}}
+    {{#each fields}}
+    {{name}}: {{#if (eq type "DateTime")}}{{#if isNullable}}json['{{name}}'] != null ? DateTime.parse(json['{{name}}'] as String) : null{{else}}DateTime.parse(json['{{name}}'] as String){{/if}}{{else}}{{#if nestedSchema}}{{#if isNullable}}json['{{name}}'] != null ? {{type}}.fromJson(json['{{name}}'] as Map<String, dynamic>) : null{{else}}{{type}}.fromJson(json['{{name}}'] as Map<String, dynamic>){{/if}}{{else if listItemSchema}}{{#if isNullable}}json['{{name}}'] != null ? (json['{{name}}'] as List<dynamic>).map((e) => {{listItemSchema.className}}.fromJson(e as Map<String, dynamic>)).toList() : null{{else}}(json['{{name}}'] as List<dynamic>).map((e) => {{listItemSchema.className}}.fromJson(e as Map<String, dynamic>)).toList(){{/if}}{{else}}{{#if isNullable}}json['{{name}}'] as {{{type}}}?{{else}}json['{{name}}'] as {{{type}}}{{/if}}{{/if}}{{/if}},
+      {{/each}}{{/if}}
+    );
+  }
+
+{{#each fields}}
+  /// The {{name}} field.
+  final {{{type}}}{{#if isNullable}}?{{/if}} {{name}};
+
+{{/each}}
+  @override
+  List<Object?> get props => [
+{{#each fields}}
+    {{name}},
+{{/each}}
+];
+
+  /// Converts this [{{className}}] to a JSON map.
+  Map<String, dynamic> toJson() {
+    return {
+    {{#each fields}}
+      {{#if isOptional}}if ({{name}} != null) {{/if}}'{{name}}': {{#if (eq type "DateTime")}}{{name}}{{#if isNullable}}?{{/if}}.toIso8601String(){{else if nestedSchema}}{{name}}{{#if isNullable}}?{{/if}}.toJson(){{else if listItemSchema}}{{name}}{{#if isNullable}}?{{/if}}.map((e) => e.toJson()).toList(){{else}}{{name}}{{/if}},
+      {{/each}}
+    };
+  }
+}

@@ -1,0 +1,27 @@
+# Firestore Collections Configuration Example
+# Copy this file to collections.yaml and customize for your project
+
+collections:
+  # Example: Simple collection
+  - name: users
+    output: ./lib/src/models
+    sampleSize: 20  # Optional: number of documents to sample (default: 20)
+
+  # Example: Collection with subcollections
+  # Subcollections are nested inside parent documents (e.g., orders/{orderId}/items)
+  # The tool will find a parent document and extract the subcollection schema from it
+  - name: orders
+    output: ./lib/src/models
+    subcollections:
+      - items          # Will extract from orders/{orderId}/items
+      - shipping_info  # Will extract from orders/{orderId}/shipping_info
+
+  # Example: Minimal configuration
+  - name: products
+    output: ./models
+
+# Notes:
+# - name: Firestore collection name (required)
+# - output: Output directory for generated Dart models (required)
+# - sampleSize: Number of documents to sample for type inference (optional, default: 20)
+# - subcollections: List of subcollection names to also extract (optional)
