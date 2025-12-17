@@ -23,7 +23,10 @@ export class FirestoreClient {
     try {
       // Try to use service account path if provided
       if (this.serviceAccountPath) {
-        const serviceAccountFullPath = path.resolve(process.cwd(), this.serviceAccountPath);
+        // If path is already absolute, use it; otherwise resolve relative to cwd
+        const serviceAccountFullPath = path.isAbsolute(this.serviceAccountPath)
+          ? this.serviceAccountPath
+          : path.resolve(process.cwd(), this.serviceAccountPath);
         
         if (!fs.existsSync(serviceAccountFullPath)) {
           throw new Error(`Service account file not found: ${serviceAccountFullPath}`);

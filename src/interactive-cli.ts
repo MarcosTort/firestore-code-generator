@@ -65,6 +65,21 @@ export async function runInteractiveCLI(
   );
   const resolvedProjectId = ConfigFileLoader.resolveProjectId(config, projectId);
 
+  // Debug: Show what credentials will be used
+  if (resolvedServiceAccount) {
+    console.log(chalk.gray(`📁 Using service account: ${resolvedServiceAccount}`));
+    if (!require('fs').existsSync(resolvedServiceAccount)) {
+      console.error(chalk.red(`\n✗ Service account file not found at: ${resolvedServiceAccount}`));
+      console.error(chalk.yellow(`\nCurrent working directory: ${process.cwd()}`));
+      console.error(chalk.yellow(`\nPlease check:`));
+      console.error(chalk.gray(`  1. The path in firestore-dart-gen.yaml is correct`));
+      console.error(chalk.gray(`  2. The file exists relative to: ${process.cwd()}`));
+      console.error(chalk.gray(`  3. Or use: firestore-dart-gen --service-account <path>\n`));
+      process.exit(1);
+    }
+    console.log('');
+  }
+
   // Initialize Firebase
   const client = new FirestoreClient(resolvedProjectId, resolvedServiceAccount);
   

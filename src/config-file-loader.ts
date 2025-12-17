@@ -90,9 +90,15 @@ export class ConfigFileLoader {
    */
   static resolveServiceAccountPath(config: CLIConfig | null, cliArg?: string): string | undefined {
     // Priority: CLI argument > config file > env variable
-    if (cliArg) return cliArg;
+    if (cliArg) {
+      const resolved = path.isAbsolute(cliArg) ? cliArg : path.resolve(process.cwd(), cliArg);
+      return resolved;
+    }
     if (config?.firebase?.serviceAccount) {
-      return path.resolve(process.cwd(), config.firebase.serviceAccount);
+      const resolved = path.isAbsolute(config.firebase.serviceAccount) 
+        ? config.firebase.serviceAccount 
+        : path.resolve(process.cwd(), config.firebase.serviceAccount);
+      return resolved;
     }
     return process.env.GOOGLE_APPLICATION_CREDENTIALS;
   }
