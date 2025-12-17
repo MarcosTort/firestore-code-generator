@@ -61,3 +61,15 @@ export interface CollectionSelection {
   subcollections: string[];
 }
 
+export interface CLIConfig {
+  firebase?: {
+    serviceAccount?: string;
+    projectId?: string;
+  };
+  collections?: string[];
+  output?: {
+    directory?: string;
+    sampleSize?: number;
+  };
+}
+

@@ -33,7 +33,11 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": ""
+    "url": "git+https://github.com/TU_USUARIO/firestore-dart-generator.git"
+  },
+  "homepage": "https://github.com/TU_USUARIO/firestore-dart-generator#readme",
+  "bugs": {
+    "url": "https://github.com/TU_USUARIO/firestore-dart-generator/issues"
   },
   "dependencies": {
     "chalk": "^4.1.2",

@@ -5,6 +5,7 @@ import { spawn } from 'child_process';
 import { FirestoreClient } from './firestore-client';
 import { SchemaAnalyzer } from './schema-analyzer';
 import { DartGenerator } from './dart-generator';
+import { ConfigFileLoader } from './config-file-loader';
 
 /**
  * Run dart format command
@@ -49,12 +50,23 @@ function runDartFormat(directory: string): Promise<void> {
  */
 export async function runInteractiveCLI(
   serviceAccountPath?: string,
-  projectId?: string
+  projectId?: string,
+  configPath?: string
 ): Promise<void> {
   console.log(chalk.bold.blue('\n🔥 Firestore Dart Generator - Interactive Mode\n'));
 
+  // Load config file if exists
+  const config = ConfigFileLoader.loadConfig(configPath);
+
+  // Resolve credentials with priority: CLI args > config file > env
+  const resolvedServiceAccount = ConfigFileLoader.resolveServiceAccountPath(
+    config,
+    serviceAccountPath
+  );
+  const resolvedProjectId = ConfigFileLoader.resolveProjectId(config, projectId);
+
   // Initialize Firebase
-  const client = new FirestoreClient(projectId, serviceAccountPath);
+  const client = new FirestoreClient(resolvedProjectId, resolvedServiceAccount);
   
   // Handle interruption (Ctrl+C)
   process.on('SIGINT', async () => {
@@ -90,13 +102,23 @@ export async function runInteractiveCLI(
 
     console.log(chalk.blue(`Found ${collections.length} collection(s)\n`));
 
+    // Get pre-selected collections from config
+    const preSelected = config?.collections || [];
+    if (preSelected.length > 0) {
+      console.log(chalk.gray(`Pre-selected from config: ${preSelected.join(', ')}\n`));
+    }
+
     // Select collections (multiple)
     const { selectedCollections } = await inquirer.prompt([
       {
         type: 'checkbox',
         name: 'selectedCollections',
         message: 'Select collections to generate models for:',
-        choices: collections.map(col => ({ name: col, value: col, checked: false })),
+        choices: collections.map(col => ({
+          name: col,
+          value: col,
+          checked: preSelected.includes(col), // PRE-SELECCIONAR
+        })),
         validate: (answer) => {
           if (answer.length < 1) {
             return 'You must select at least one collection';
@@ -141,13 +163,13 @@ export async function runInteractiveCLI(
       }
     }
 
-    // Configure output directory
+    // Configure output directory (with default from config)
     const { outputDirectory } = await inquirer.prompt([
       {
         type: 'input',
         name: 'outputDirectory',
         message: 'Output directory for generated Dart files:',
-        default: './lib/src/models',
+        default: config?.output?.directory || './lib/src/models',
         validate: (input) => {
           if (!input || input.trim() === '') {
             return 'Output directory cannot be empty';
@@ -157,13 +179,13 @@ export async function runInteractiveCLI(
       },
     ]);
 
-    // Configure sample size
+    // Configure sample size (with default from config)
     const { sampleSize } = await inquirer.prompt([
       {
         type: 'number',
         name: 'sampleSize',
         message: 'Number of documents to sample per collection:',
-        default: 20,
+        default: config?.output?.sampleSize || 20,
         validate: (input: any) => {
           const num = Number(input);
           if (isNaN(num) || num < 1) {

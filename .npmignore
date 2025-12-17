@@ -1,18 +1,34 @@
+# Source files (solo publicamos dist/)
 src/
-tsconfig.json
-*.log
-.DS_Store
-firebase_service_account.json
-*-service-account.json
-collections.yaml
-node_modules/
-.git/
-.gitignore
-.env
-*.md
-!README.md
 test/
-tests/
-*.test.ts
-*.test.js
+coverage/
 
+# Development files
+*.log
+.env
+.DS_Store
+*.test.ts
+*.spec.ts
+jest.config.js
+tsconfig.json
+
+# Extra documentation (mantener solo README.md)
+TESTING.md
+TEST_SUMMARY.md
+INTERACTIVE_CLI.md
+cli.plan.md
+PUBLICACION_NPM.md
+
+# Config files
+.gitignore
+.editorconfig
+
+# Firebase credentials y ejemplos
+*service-account.json
+firebase_service_account.json
+collections.yaml
+collections.example.yaml
+
+# Git
+.git/
+.github/

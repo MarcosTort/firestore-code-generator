@@ -85,6 +85,74 @@ FIREBASE_PROJECT_ID=your-project-id
 
 Or use the `--service-account` and `--project-id` flags when running the command.
 
+## Configuration File (Optional)
+
+You can create a `firestore-dart-gen.yaml` file to:
+- ✅ Specify Firebase credentials (no need to type them every time)
+- ✅ Pre-select collections you use frequently
+- ✅ Set default output directory and sample size
+- ✅ Share configuration with your team (without credentials)
+
+### Example Configuration
+
+Create `firestore-dart-gen.yaml` in your project root:
+
+```yaml
+# Firebase Configuration
+firebase:
+  serviceAccount: ./firebase_service_account.json
+  projectId: my-project-id  # optional
+
+# Pre-select these collections in the CLI
+collections:
+  - users
+  - products
+  - orders
+
+# Default output settings
+output:
+  directory: ./lib/src/models
+  sampleSize: 20
+```
+
+Copy from the example file:
+```bash
+cp firestore-dart-gen.example.yaml firestore-dart-gen.yaml
+# Edit with your settings
+```
+
+### Usage with Config File
+
+```bash
+# CLI will automatically find firestore-dart-gen.yaml
+firestore-dart-gen
+
+# Or specify a custom config file
+firestore-dart-gen --config my-config.yaml
+
+# Override config with CLI arguments
+firestore-dart-gen --service-account other.json
+```
+
+### Priority Order
+
+Configuration is resolved in this order (highest to lowest priority):
+
+1. **CLI arguments** (e.g., `--service-account other.json`)
+2. **Config file** (`firestore-dart-gen.yaml`)
+3. **Environment variables** (`.env` file)
+
+**Example:** If you have `serviceAccount` in the YAML but also pass `--service-account`, the CLI argument wins.
+
+### Benefits
+
+- ✅ Save time - no need to type credentials every run
+- ✅ Pre-select collections you work with frequently
+- ✅ Team consistency - share same defaults
+- ✅ Flexible - can override with CLI args anytime
+
+⚠️ **Important:** Add `firestore-dart-gen.yaml` to `.gitignore` if it contains sensitive paths!
+
 ## Usage
 
 ### Interactive Mode (Default) 🎮

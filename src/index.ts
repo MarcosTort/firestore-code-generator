@@ -16,9 +16,10 @@ program
   .version('1.0.0')
   .option('--service-account <path>', 'Path to Firebase service account JSON file')
   .option('--project-id <id>', 'Firebase project ID', process.env.FIREBASE_PROJECT_ID)
+  .option('-c, --config <path>', 'Path to config file (firestore-dart-gen.yaml)')
   .action(async (options) => {
     try {
-      await runInteractiveCLI(options.serviceAccount, options.projectId);
+      await runInteractiveCLI(options.serviceAccount, options.projectId, options.config);
     } catch (error) {
       console.error(chalk.red('\nError:'), error);
       process.exit(1);

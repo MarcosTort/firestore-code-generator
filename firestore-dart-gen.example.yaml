@@ -1,0 +1,28 @@
+# Firestore Dart Generator Configuration
+# Copy this file to firestore-dart-gen.yaml and customize
+
+# Firebase Configuration
+firebase:
+  # Path to your Firebase service account JSON file
+  serviceAccount: ./firebase_service_account.json
+  
+  # Optional: Firebase project ID (if not in service account)
+  # projectId: my-project-id
+
+# Collections Configuration (optional)
+# These collections will be pre-selected in the interactive CLI
+collections:
+  - users
+  - products
+  - orders
+  # - reviews
+  # - settings
+
+# Output Configuration (optional)
+output:
+  # Directory where Dart models will be generated
+  directory: ./lib/src/models
+  
+  # Number of documents to sample per collection
+  sampleSize: 20
+

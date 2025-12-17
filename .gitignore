@@ -7,6 +7,12 @@ firebase_service_account.json
 *-service-account.json
 collections.yaml
 
+# Config files
+firestore-dart-gen.yaml
+firestore-dart-gen.yml
+.firestore-dart-gen.yaml
+.firestore-dart-gen.yml
+
 # Test coverage
 coverage/
 *.lcov
