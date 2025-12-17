@@ -13,6 +13,10 @@
     "extract:single": "node dist/index.js single",
     "dev": "ts-node src/index.ts batch",
     "dev:single": "ts-node src/index.ts single",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage",
+    "test:update-goldens": "UPDATE_GOLDENS=true jest",
     "prepublishOnly": "npm run build"
   },
   "keywords": [
@@ -34,18 +38,20 @@
     "url": ""
   },
   "dependencies": {
-    "firebase-admin": "^12.0.0",
-    "commander": "^12.0.0",
-    "handlebars": "^4.7.8",
     "chalk": "^4.1.2",
+    "commander": "^12.0.0",
     "dotenv": "^16.4.0",
+    "firebase-admin": "^12.0.0",
+    "handlebars": "^4.7.8",
     "js-yaml": "^4.1.0"
   },
   "devDependencies": {
-    "@types/node": "^20.11.0",
+    "@types/jest": "^30.0.0",
     "@types/js-yaml": "^4.0.9",
-    "typescript": "^5.3.3",
-    "ts-node": "^10.9.2"
+    "@types/node": "^20.19.27",
+    "jest": "^30.2.0",
+    "ts-jest": "^29.4.6",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.3.3"
   }
 }
-

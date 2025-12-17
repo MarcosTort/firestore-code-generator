@@ -373,6 +373,26 @@ Or ignore it - the generated code is valid, just might need manual formatting.
 3. Build: `npm run build`
 4. Run: `npm run extract` or `npm run extract:single`
 
+### Testing
+
+The project includes comprehensive golden tests to ensure code generation quality:
+
+```bash
+# Run all tests
+npm test
+
+# Run tests in watch mode
+npm run test:watch
+
+# Run tests with coverage report
+npm run test:coverage
+
+# Update golden files (when intentionally changing output)
+npm run test:update-goldens
+```
+
+Golden tests verify that the generated Dart code matches expected output exactly. See [test/README.md](test/README.md) for more details.
+
 ### Project Structure
 
 ```
