@@ -1,7 +1,7 @@
+import chalk from 'chalk';
 import * as admin from 'firebase-admin';
 import * as fs from 'fs';
 import * as path from 'path';
-import chalk from 'chalk';
 
 export class FirestoreClient {
   private db: admin.firestore.Firestore | null = null;
@@ -10,7 +10,7 @@ export class FirestoreClient {
   constructor(
     private projectId?: string,
     private serviceAccountPath?: string
-  ) {}
+  ) { }
 
   /**
    * Initialize Firebase Admin SDK
@@ -27,7 +27,7 @@ export class FirestoreClient {
         const serviceAccountFullPath = path.isAbsolute(this.serviceAccountPath)
           ? this.serviceAccountPath
           : path.resolve(process.cwd(), this.serviceAccountPath);
-        
+
         if (!fs.existsSync(serviceAccountFullPath)) {
           throw new Error(`Service account file not found: ${serviceAccountFullPath}`);
         }
@@ -42,7 +42,7 @@ export class FirestoreClient {
         });
 
         console.log(chalk.green('✓ Firebase initialized with service account'));
-      } 
+      }
       // Try GOOGLE_APPLICATION_CREDENTIALS env variable
       else if (process.env.GOOGLE_APPLICATION_CREDENTIALS) {
         admin.initializeApp({
@@ -51,7 +51,7 @@ export class FirestoreClient {
         });
 
         console.log(chalk.green('✓ Firebase initialized with application default credentials'));
-      } 
+      }
       // No credentials provided
       else {
         throw new Error(
@@ -196,29 +196,38 @@ export class FirestoreClient {
     if (!this.db) {
       throw new Error('Firestore not initialized');
     }
-    
+
     const collections = await this.db.listCollections();
     return collections.map(col => col.id);
   }
 
   /**
-   * List subcollections for a given collection (by checking first document)
+   * List subcollections for a given collection (by checking a sample of documents)
    */
   async listSubcollections(collectionPath: string): Promise<string[]> {
     if (!this.db) {
       throw new Error('Firestore not initialized');
     }
-    
-    // Get first document to check subcollections
-    const snapshot = await this.db.collection(collectionPath).limit(1).get();
-    
+
+    // Get a sample of documents to check for subcollections
+    // We check more than one because some documents might not have subcollections
+    // while others do
+    const snapshot = await this.db.collection(collectionPath).limit(10).get();
+
     if (snapshot.empty) {
       return [];
     }
-    
-    const doc = snapshot.docs[0];
-    const subcollections = await doc.ref.listCollections();
-    return subcollections.map(col => col.id);
+
+    const subcollectionsSet = new Set<string>();
+
+    for (const doc of snapshot.docs) {
+      const subcollections = await doc.ref.listCollections();
+      for (const col of subcollections) {
+        subcollectionsSet.add(col.id);
+      }
+    }
+
+    return Array.from(subcollectionsSet);
   }
 
   /**
