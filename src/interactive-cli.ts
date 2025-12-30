@@ -1,11 +1,11 @@
-import inquirer from 'inquirer';
 import chalk from 'chalk';
-import * as path from 'path';
 import { spawn } from 'child_process';
+import inquirer from 'inquirer';
+import * as path from 'path';
+import { ConfigFileLoader } from './config-file-loader';
+import { DartGenerator } from './dart-generator';
 import { FirestoreClient } from './firestore-client';
 import { SchemaAnalyzer } from './schema-analyzer';
-import { DartGenerator } from './dart-generator';
-import { ConfigFileLoader } from './config-file-loader';
 
 /**
  * Run dart format command
@@ -82,7 +82,7 @@ export async function runInteractiveCLI(
 
   // Initialize Firebase
   const client = new FirestoreClient(resolvedProjectId, resolvedServiceAccount);
-  
+
   // Handle interruption (Ctrl+C)
   process.on('SIGINT', async () => {
     console.log(chalk.yellow('\n\n⚠ Process interrupted by user'));
@@ -95,10 +95,10 @@ export async function runInteractiveCLI(
   } catch (error) {
     console.error(chalk.red('\n✗ Failed to connect to Firebase'));
     console.error(chalk.yellow('\nPossible solutions:'));
-    
+
     // Check if config file exists
     const configExists = ConfigFileLoader.loadConfig(configPath) !== null;
-    
+
     if (!configExists && !resolvedServiceAccount) {
       console.error(chalk.cyan('\n📄 Option 1: Create a config file'));
       console.error(chalk.gray('   Create firestore-dart-gen.yaml:'));
@@ -107,19 +107,19 @@ export async function runInteractiveCLI(
       console.error(chalk.cyan('   Or copy from example:'));
       console.error(chalk.gray('   cp firestore-dart-gen.example.yaml firestore-dart-gen.yaml\n'));
     }
-    
+
     console.error(chalk.cyan('🔧 Option 2: Use CLI arguments'));
     console.error(chalk.gray('   firestore-dart-gen --service-account ./firebase_service_account.json\n'));
-    
+
     console.error(chalk.cyan('🌍 Option 3: Set environment variable'));
     console.error(chalk.gray('   export GOOGLE_APPLICATION_CREDENTIALS=./firebase_service_account.json\n'));
-    
+
     console.error(chalk.yellow('Other checks:'));
     console.error(chalk.gray('  - Verify your service account file path is correct'));
     console.error(chalk.gray('  - Ensure service account has read permissions\n'));
     throw error;
   }
-  
+
   const firebaseProjectId = client.getProjectId();
   console.log(chalk.green(`✓ Connected to Firebase Project: ${chalk.bold(firebaseProjectId)}\n`));
 
@@ -127,7 +127,7 @@ export async function runInteractiveCLI(
     // List collections
     console.log(chalk.blue('🔍 Discovering collections...\n'));
     const collections = await client.listCollections();
-    
+
     if (collections.length === 0) {
       console.log(chalk.yellow('⚠ No collections found in this project'));
       await client.close();
@@ -168,35 +168,6 @@ export async function runInteractiveCLI(
       return;
     }
 
-    // Detect and ask about subcollections
-    const collectionsWithSubs: Map<string, string[]> = new Map();
-    
-    console.log(chalk.blue('\n🌳 Checking for subcollections...\n'));
-    for (const collection of selectedCollections) {
-      console.log(chalk.gray(`  Analyzing ${collection}...`));
-      const subcollections = await client.listSubcollections(collection);
-      
-      if (subcollections.length > 0) {
-        console.log(chalk.cyan(`  Found ${subcollections.length} subcollection(s): ${subcollections.join(', ')}`));
-        
-        const { includeSubcollections } = await inquirer.prompt([
-          {
-            type: 'confirm',
-            name: 'includeSubcollections',
-            message: `  Include subcollections for ${chalk.bold(collection)}?`,
-            default: true,
-          },
-        ]);
-        
-        if (includeSubcollections) {
-          collectionsWithSubs.set(collection, subcollections);
-        }
-        console.log('');
-      } else {
-        console.log(chalk.gray(`  No subcollections found\n`));
-      }
-    }
-
     // Configure output directory (with default from config)
     const { outputDirectory } = await inquirer.prompt([
       {
@@ -230,19 +201,48 @@ export async function runInteractiveCLI(
       },
     ]);
 
+    // Detect and ask about subcollections (using the sample size)
+    const collectionsWithSubs: Map<string, string[]> = new Map();
+
+    console.log(chalk.blue('\n🌳 Checking for subcollections...\n'));
+    for (const collection of selectedCollections) {
+      console.log(chalk.gray(`  Analyzing ${collection}...`));
+      const subcollections = await client.listSubcollections(collection, sampleSize);
+
+      if (subcollections.length > 0) {
+        console.log(chalk.cyan(`  Found ${subcollections.length} subcollection(s): ${subcollections.join(', ')}`));
+
+        const { includeSubcollections } = await inquirer.prompt([
+          {
+            type: 'confirm',
+            name: 'includeSubcollections',
+            message: `  Include subcollections for ${chalk.bold(collection)}?`,
+            default: true,
+          },
+        ]);
+
+        if (includeSubcollections) {
+          collectionsWithSubs.set(collection, subcollections);
+        }
+        console.log('');
+      } else {
+        console.log(chalk.gray(`  No subcollections found\n`));
+      }
+    }
+
     // Show summary and confirm
     console.log(chalk.bold.cyan('\n📋 Generation Summary:'));
     console.log(chalk.gray('─'.repeat(60)));
     console.log(chalk.white(`  Firebase Project: ${firebaseProjectId}`));
     console.log(chalk.white(`  Collections: ${selectedCollections.join(', ')}`));
-    
+
     if (collectionsWithSubs.size > 0) {
       console.log(chalk.white('  Subcollections:'));
       for (const [parent, subs] of collectionsWithSubs.entries()) {
         console.log(chalk.gray(`    └─ ${parent}: ${subs.join(', ')}`));
       }
     }
-    
+
     console.log(chalk.white(`  Output: ${outputDirectory}`));
     console.log(chalk.white(`  Sample Size: ${sampleSize} documents per collection`));
     console.log(chalk.gray('─'.repeat(60)));
@@ -264,7 +264,7 @@ export async function runInteractiveCLI(
 
     // Generate models
     console.log(chalk.bold.blue('\n🚀 Starting generation...\n'));
-    
+
     const analyzer = new SchemaAnalyzer();
     const generator = new DartGenerator();
     const generatedFiles: string[] = [];
@@ -273,7 +273,7 @@ export async function runInteractiveCLI(
     // Process main collections
     for (const collection of selectedCollections) {
       console.log(chalk.bold(`\n📦 Processing collection: ${collection}`));
-      
+
       // Check if collection exists and has documents
       const exists = await client.collectionExists(collection);
       if (!exists) {
@@ -286,17 +286,17 @@ export async function runInteractiveCLI(
         console.log(chalk.yellow(`  ⚠ No documents found, skipping\n`));
         continue;
       }
-      
+
       const schema = analyzer.analyzeDocuments(collection, documents);
       const filePath = await generator.writeModelToFile(schema, outputPath);
       generatedFiles.push(filePath);
       console.log('');
-      
+
       // Process subcollections
       const subcollections = collectionsWithSubs.get(collection) || [];
       for (const subcollection of subcollections) {
         console.log(chalk.bold(`\n📦 Processing subcollection: ${collection}/${subcollection}`));
-        
+
         const subExists = await client.subcollectionExists(collection, subcollection);
         if (!subExists) {
           console.log(chalk.yellow(`  ⚠ No documents found, skipping\n`));
@@ -308,12 +308,12 @@ export async function runInteractiveCLI(
           subcollection,
           sampleSize
         );
-        
+
         if (subDocs.length === 0) {
           console.log(chalk.yellow(`  ⚠ No documents found, skipping\n`));
           continue;
         }
-        
+
         const subSchema = analyzer.analyzeDocuments(subcollection, subDocs);
         const subFilePath = await generator.writeModelToFile(subSchema, outputPath);
         generatedFiles.push(subFilePath);

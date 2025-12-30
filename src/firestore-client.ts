@@ -204,7 +204,7 @@ export class FirestoreClient {
   /**
    * List subcollections for a given collection (by checking a sample of documents)
    */
-  async listSubcollections(collectionPath: string): Promise<string[]> {
+  async listSubcollections(collectionPath: string, limit: number = 10): Promise<string[]> {
     if (!this.db) {
       throw new Error('Firestore not initialized');
     }
@@ -212,7 +212,7 @@ export class FirestoreClient {
     // Get a sample of documents to check for subcollections
     // We check more than one because some documents might not have subcollections
     // while others do
-    const snapshot = await this.db.collection(collectionPath).limit(10).get();
+    const snapshot = await this.db.collection(collectionPath).limit(limit).get();
 
     if (snapshot.empty) {
       return [];
