@@ -586,5 +586,5 @@ MIT
 
 ## Support
 
-If you encounter any issues or have questions, please [open an issue](https://github.com/your-username/firestore-dart-generator/issues) on GitHub.
+If you encounter any issues or have questions, please [open an issue](https://github.com/MarcosTort/firestore-code-generator/issues) on GitHub.
 
