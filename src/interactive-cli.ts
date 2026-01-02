@@ -206,11 +206,11 @@ export async function runInteractiveCLI(
 
     console.log(chalk.blue('\n🌳 Checking for subcollections...\n'));
     for (const collection of selectedCollections) {
-      console.log(chalk.gray(`  Analyzing ${collection}...`));
+      console.log(chalk.bold(`Analyzing collection: ${collection}`));
       const subcollections = await client.listSubcollections(collection, sampleSize);
 
       if (subcollections.length > 0) {
-        console.log(chalk.cyan(`  Found ${subcollections.length} subcollection(s): ${subcollections.join(', ')}`));
+        console.log(chalk.green(`✓ Found ${subcollections.length} subcollection(s): ${subcollections.join(', ')}`));
 
         const { includeSubcollections } = await inquirer.prompt([
           {
@@ -226,7 +226,8 @@ export async function runInteractiveCLI(
         }
         console.log('');
       } else {
-        console.log(chalk.gray(`  No subcollections found\n`));
+        console.log(chalk.gray(`✓ No subcollections found`));
+        console.log('');
       }
     }
 

@@ -209,22 +209,59 @@ export class FirestoreClient {
       throw new Error('Firestore not initialized');
     }
 
+    console.log(chalk.gray(`  Sampling ${limit} document(s) from ${collectionPath}...`));
+
     // Get a sample of documents to check for subcollections
     // We check more than one because some documents might not have subcollections
     // while others do
     const snapshot = await this.db.collection(collectionPath).limit(limit).get();
 
     if (snapshot.empty) {
+      console.log(chalk.yellow(`  ⚠ No documents found in collection`));
       return [];
     }
 
     const subcollectionsSet = new Set<string>();
+    const docsWithSubcollections: string[] = [];
+    const subcollectionsByDoc = new Map<string, string[]>();
 
     for (const doc of snapshot.docs) {
       const subcollections = await doc.ref.listCollections();
-      for (const col of subcollections) {
-        subcollectionsSet.add(col.id);
+      if (subcollections.length > 0) {
+        docsWithSubcollections.push(doc.id);
+        const subNames = subcollections.map(col => col.id);
+        subcollectionsByDoc.set(doc.id, subNames);
+        for (const col of subcollections) {
+          subcollectionsSet.add(col.id);
+        }
       }
+    }
+
+    // Detailed logging
+    console.log(chalk.gray(`  📊 Sampled ${snapshot.docs.length} document(s)`));
+    console.log(chalk.gray(`  📊 Documents with subcollections: ${docsWithSubcollections.length}/${snapshot.docs.length}`));
+
+    if (docsWithSubcollections.length > 0) {
+      console.log(chalk.gray(`  📊 Unique subcollections found: ${subcollectionsSet.size}`));
+
+      // Show which documents have which subcollections (up to 5 examples)
+      const exampleDocs = docsWithSubcollections.slice(0, 5);
+      for (const docId of exampleDocs) {
+        const subs = subcollectionsByDoc.get(docId) || [];
+        console.log(chalk.gray(`     └─ Document "${docId}": [${subs.join(', ')}]`));
+      }
+
+      if (docsWithSubcollections.length > 5) {
+        console.log(chalk.gray(`     └─ ... and ${docsWithSubcollections.length - 5} more document(s)`));
+      }
+    } else {
+      console.log(chalk.gray(`  📊 No subcollections found in sampled documents`));
+    }
+
+    // Warning if we hit the limit - there might be more subcollections
+    if (snapshot.docs.length === limit) {
+      console.log(chalk.yellow(`  ⚠ Sampled limit reached (${limit} docs). If subcollections exist in other documents, they may not be detected.`));
+      console.log(chalk.yellow(`     Consider increasing the sample size if you suspect missing subcollections.`));
     }
 
     return Array.from(subcollectionsSet);
