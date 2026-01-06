@@ -6,6 +6,7 @@ import { ConfigFileLoader } from './config-file-loader';
 import { DartGenerator } from './dart-generator';
 import { FirestoreClient } from './firestore-client';
 import { SchemaAnalyzer } from './schema-analyzer';
+const Table = require('cli-table3');
 
 /**
  * Run dart format command
@@ -266,6 +267,40 @@ export async function runInteractiveCLI(
             } else {
               console.log(chalk.cyan(`\n  Found ${parentInfos.length} parent documents with '${subcollection}'\n`));
 
+              // Create table to display parent document information
+              const table = new Table({
+                head: [
+                  chalk.bold('#'),
+                  chalk.bold('Parent Document ID'),
+                  chalk.bold('Fields'),
+                  chalk.bold('Field Names')
+                ],
+                colWidths: [5, 25, 10, 60],
+                wordWrap: true,
+                style: {
+                  head: ['cyan'],
+                  border: ['gray']
+                }
+              });
+
+              // Add rows to table
+              parentInfos.forEach((info, index) => {
+                const fieldsPreview = info.sampleFields && info.sampleFields.length > 0
+                  ? info.sampleFields.join(', ')
+                  : 'no fields detected';
+                const recommended = index === 0 ? ' ⭐' : '';
+
+                table.push([
+                  chalk.yellow((index + 1).toString()),
+                  chalk.green(info.parentId) + recommended,
+                  chalk.cyan(info.fieldCount.toString()),
+                  chalk.gray(fieldsPreview)
+                ]);
+              });
+
+              console.log(table.toString());
+              console.log('');
+
               const choices = parentInfos.map((info, index) => {
                 const fieldsPreview = info.sampleFields && info.sampleFields.length > 0
                   ? info.sampleFields.slice(0, 5).join(', ')
@@ -284,16 +319,24 @@ export async function runInteractiveCLI(
 
               const { selectedParentIndex } = await inquirer.prompt([
                 {
-                  type: 'rawlist',
+                  type: 'number',
                   name: 'selectedParentIndex',
-                  message: `  Select parent document for '${subcollection}':`,
-                  choices: choices,
-                  default: 0,
+                  message: `  Enter the number of the parent document to use (1-${parentInfos.length}):`,
+                  default: 1,
+                  validate: (input: number) => {
+                    const num = Number(input);
+                    if (isNaN(num) || num < 1 || num > parentInfos.length) {
+                      return `Please enter a number between 1 and ${parentInfos.length}`;
+                    }
+                    return true;
+                  },
                 },
               ]);
 
-              parentSelections.set(subcollection, parentInfos[selectedParentIndex].parentId);
-              console.log(chalk.green(`  ✓ Selected: ${parentInfos[selectedParentIndex].parentId}\n`));
+              // Convert from 1-indexed to 0-indexed
+              const actualIndex = selectedParentIndex - 1;
+              parentSelections.set(subcollection, parentInfos[actualIndex].parentId);
+              console.log(chalk.green(`  ✓ Selected: ${parentInfos[actualIndex].parentId}\n`));
             }
           }
 
