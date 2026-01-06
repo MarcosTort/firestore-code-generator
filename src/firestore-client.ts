@@ -346,9 +346,18 @@ export class FirestoreClient {
     }
 
     const parentsWithSubcollection: SubcollectionParentInfo[] = [];
+    const maxParentsToAnalyze = 10; // Limit to avoid overwhelming the user
 
     // Check each parent document for the subcollection
+    let checkedCount = 0;
     for (const parentDoc of parentSnapshot.docs) {
+      checkedCount++;
+
+      // Show progress every 10 documents
+      if (checkedCount % 10 === 0) {
+        console.log(chalk.gray(`  Checked ${checkedCount}/${parentSnapshot.docs.length} parent documents...`));
+      }
+
       const subcollectionSnapshot = await parentDoc.ref
         .collection(subcollectionName)
         .limit(sampleSize)
@@ -373,6 +382,12 @@ export class FirestoreClient {
           fieldCount: sampleFields.length,
           sampleFields,
         });
+
+        // Stop if we've found enough parents to choose from
+        if (parentsWithSubcollection.length >= maxParentsToAnalyze) {
+          console.log(chalk.gray(`  Found ${maxParentsToAnalyze} parents, stopping search...`));
+          break;
+        }
       }
     }
 
