@@ -258,29 +258,30 @@ export async function runInteractiveCLI(
               continue;
             }
 
+
             if (parentInfos.length === 1) {
               // Only one parent found, use it automatically
               console.log(chalk.gray(`  ✓ Using parent document: ${parentInfos[0].parentId}`));
               parentSelections.set(subcollection, parentInfos[0].parentId);
             } else {
               // Multiple parents found, let user choose
-              console.log(chalk.cyan(`\n  Found ${parentInfos.length} parent documents with '${subcollection}':\n`));
-
-              parentInfos.forEach((info, index) => {
-                const fieldsPreview = info.sampleFields.slice(0, 5).join(', ');
-                const moreFields = info.sampleFields.length > 5 ? `, +${info.sampleFields.length - 5} more` : '';
-                console.log(chalk.gray(`  ${index + 1}. ${info.parentId} → ${info.fieldCount} fields (${fieldsPreview}${moreFields})`));
-              });
+              console.log(chalk.cyan(`\n  Found ${parentInfos.length} parent documents with '${subcollection}'\n`));
 
               const { selectedParentIndex } = await inquirer.prompt([
                 {
                   type: 'list',
                   name: 'selectedParentIndex',
-                  message: `  Which parent document has the best schema for '${subcollection}'?`,
-                  choices: parentInfos.map((info, index) => ({
-                    name: `${info.parentId} (${info.fieldCount} fields)${index === 0 ? ' - recommended' : ''}`,
-                    value: index,
-                  })),
+                  message: `  Select parent document for '${subcollection}':`,
+                  choices: parentInfos.map((info, index) => {
+                    const fieldsPreview = info.sampleFields.slice(0, 5).join(', ');
+                    const moreFields = info.sampleFields.length > 5 ? ` +${info.sampleFields.length - 5} more` : '';
+                    const recommended = index === 0 ? ' ⭐' : '';
+                    return {
+                      name: `${info.parentId} (${info.fieldCount} fields: ${fieldsPreview}${moreFields})${recommended}`,
+                      value: index,
+                      short: info.parentId,
+                    };
+                  }),
                   default: 0,
                 },
               ]);
