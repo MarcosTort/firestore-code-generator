@@ -1,0 +1,21 @@
+/// A model representing a {{collectionName}} document from Firestore.
+@JsonSerializable()
+class {{className}} {
+  /// Creates a new [{{className}}] instance.
+  const {{className}}({{#if fields.length}}{
+{{#each fields}}
+    {{#unless isOptional}}required {{/unless}}this.{{name}},
+{{/each}}
+  }{{/if}});
+
+  /// Creates a [{{className}}] from a JSON map.
+  factory {{className}}.fromJson(Map<String, dynamic> json) => _${{className}}FromJson(json);
+
+{{#each fields}}
+  /// The {{name}} field.
+  final {{{type}}}{{#if isNullable}}?{{/if}} {{name}};
+
+{{/each}}
+  /// Converts this [{{className}}] to a JSON map.
+  Map<String, dynamic> toJson() => _${{className}}ToJson(this);
+}

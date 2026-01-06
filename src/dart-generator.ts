@@ -2,7 +2,7 @@ import chalk from 'chalk';
 import * as fs from 'fs';
 import Handlebars from 'handlebars';
 import * as path from 'path';
-import { SchemaInfo } from './types';
+import { SchemaInfo, SerializationMethod } from './types';
 
 export class DartGenerator {
   private template: HandlebarsTemplateDelegate | null = null;
@@ -24,12 +24,12 @@ export class DartGenerator {
   /**
    * Load the Handlebars template
    */
-  private loadTemplate(): void {
-    if (this.template) {
-      return;
-    }
+  private loadTemplate(serializationMethod: SerializationMethod = 'manual'): void {
+    const templateName = serializationMethod === 'json_serializable'
+      ? 'model_json_serializable.hbs'
+      : 'model.hbs';
 
-    const templatePath = path.join(__dirname, 'templates', 'model.hbs');
+    const templatePath = path.join(__dirname, 'templates', templateName);
 
     if (!fs.existsSync(templatePath)) {
       throw new Error(`Template file not found: ${templatePath}`);
@@ -40,24 +40,37 @@ export class DartGenerator {
   }
 
   /**
+   * Generate imports based on serialization method
+   */
+  private generateImports(serializationMethod: SerializationMethod, fileName: string): string {
+    if (serializationMethod === 'json_serializable') {
+      return `import 'package:json_annotation/json_annotation.dart';\n\npart '${fileName}.g.dart';\n\n`;
+    }
+    return "import 'package:equatable/equatable.dart';\n\n";
+  }
+
+  /**
    * Generate Dart model code from schema
    */
-  generateModel(schema: SchemaInfo): string {
-    this.loadTemplate();
+  generateModel(schema: SchemaInfo, serializationMethod: SerializationMethod = 'manual'): string {
+    this.loadTemplate(serializationMethod);
 
     if (!this.template) {
       throw new Error('Template not loaded');
     }
 
-    console.log(chalk.blue(`Generating Dart code for ${schema.className}...`));
+    console.log(chalk.blue(`Generating Dart code for ${schema.className} (${serializationMethod})...`));
+
+    // Convert class name to snake_case for filename
+    const fileName = this.toSnakeCase(schema.className);
 
     // Start with import statement
-    let code = "import 'package:equatable/equatable.dart';\n\n";
+    let code = this.generateImports(serializationMethod, fileName);
 
     // Generate nested classes first
     if (schema.nestedClasses && schema.nestedClasses.length > 0) {
       const nestedClassesCode = schema.nestedClasses
-        .map(nestedSchema => this.generateNestedClass(nestedSchema))
+        .map(nestedSchema => this.generateNestedClass(nestedSchema, serializationMethod))
         .join('\n\n');
       code += nestedClassesCode + '\n\n';
     }
@@ -83,7 +96,7 @@ export class DartGenerator {
   /**
    * Generate code for a nested class
    */
-  private generateNestedClass(schema: SchemaInfo): string {
+  private generateNestedClass(schema: SchemaInfo, serializationMethod: SerializationMethod = 'manual'): string {
     if (!this.template) {
       throw new Error('Template not loaded');
     }
@@ -100,8 +113,12 @@ export class DartGenerator {
   /**
    * Write Dart model to file
    */
-  async writeModelToFile(schema: SchemaInfo, outputDir: string): Promise<string> {
-    const code = this.generateModel(schema);
+  async writeModelToFile(
+    schema: SchemaInfo,
+    outputDir: string,
+    serializationMethod: SerializationMethod = 'manual'
+  ): Promise<string> {
+    const code = this.generateModel(schema, serializationMethod);
 
     // Ensure output directory exists
     if (!fs.existsSync(outputDir)) {

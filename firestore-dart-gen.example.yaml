@@ -5,7 +5,7 @@
 firebase:
   # Path to your Firebase service account JSON file
   serviceAccount: ./firebase_service_account.json
-  
+
   # Optional: Firebase project ID (if not in service account)
   # projectId: my-project-id
 
@@ -22,7 +22,11 @@ collections:
 output:
   # Directory where Dart models will be generated
   directory: ./lib/src/models
-  
+
   # Number of documents to sample per collection
   sampleSize: 20
 
+  # Serialization method: 'manual' (default) or 'json_serializable'
+  # - manual: Uses Equatable with manual fromJson/toJson methods
+  # - json_serializable: Uses @JsonSerializable annotation with build_runner
+  serializationMethod: manual

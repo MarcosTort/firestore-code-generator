@@ -71,6 +71,10 @@ export interface CLIConfig {
     directory?: string;
     sampleSize?: number;
     subcollectionSearchLimit?: number;
+    serializationMethod?: SerializationMethod;
   };
 }
+
+export type SerializationMethod = 'manual' | 'json_serializable';
+
 

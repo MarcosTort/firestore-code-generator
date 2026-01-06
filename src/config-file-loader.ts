@@ -13,6 +13,7 @@ export interface CLIConfig {
     directory?: string;
     sampleSize?: number;
     subcollectionSearchLimit?: number;
+    serializationMethod?: 'manual' | 'json_serializable';
   };
 }
 

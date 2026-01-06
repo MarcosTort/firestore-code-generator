@@ -185,6 +185,33 @@ export async function runInteractiveCLI(
       },
     ]);
 
+    // Configure serialization method (with default from config)
+    const serializationOptions = ['manual', 'json_serializable'];
+    const defaultMethod = config?.output?.serializationMethod || 'manual';
+
+    const { selectedSerializationMethod } = await inquirer.prompt([
+      {
+        type: 'checkbox',
+        name: 'selectedSerializationMethod',
+        message: 'Select serialization method:',
+        choices: serializationOptions.map(method => ({
+          name: method === 'manual'
+            ? 'manual (Equatable with fromJson/toJson)'
+            : 'json_serializable (with annotations and build_runner)',
+          value: method,
+          checked: method === defaultMethod,
+        })),
+        validate: (answer) => {
+          if (answer.length !== 1) {
+            return 'You must select exactly one serialization method';
+          }
+          return true;
+        },
+      },
+    ]);
+
+    const serializationMethod = selectedSerializationMethod[0];
+
     // Configure sample size (with default from config)
     const { sampleSize } = await inquirer.prompt([
       {
@@ -408,7 +435,7 @@ export async function runInteractiveCLI(
       }
 
       const schema = analyzer.analyzeDocuments(collection, documents);
-      const filePath = await generator.writeModelToFile(schema, outputPath);
+      const filePath = await generator.writeModelToFile(schema, outputPath, serializationMethod);
       generatedFiles.push(filePath);
       console.log('');
 
@@ -437,7 +464,7 @@ export async function runInteractiveCLI(
           }
 
           const subSchema = analyzer.analyzeDocuments(subcollection, subDocs);
-          const subFilePath = await generator.writeModelToFile(subSchema, outputPath);
+          const subFilePath = await generator.writeModelToFile(subSchema, outputPath, serializationMethod);
           generatedFiles.push(subFilePath);
           console.log('');
         } else {
@@ -461,7 +488,7 @@ export async function runInteractiveCLI(
           }
 
           const subSchema = analyzer.analyzeDocuments(subcollection, subDocs);
-          const subFilePath = await generator.writeModelToFile(subSchema, outputPath);
+          const subFilePath = await generator.writeModelToFile(subSchema, outputPath, serializationMethod);
           generatedFiles.push(subFilePath);
           console.log('');
         }
@@ -498,7 +525,18 @@ export async function runInteractiveCLI(
     console.log(chalk.bold('\n📚 Next steps:'));
     console.log(chalk.gray('  1. Review the generated files'));
     console.log(chalk.gray('  2. Import the models in your Dart code'));
-    console.log(chalk.gray(`  3. Add 'equatable' to your pubspec.yaml if not already present\n`));
+
+    if (serializationMethod === 'json_serializable') {
+      console.log(chalk.gray('  3. Add dependencies to your pubspec.yaml:'));
+      console.log(chalk.gray('     dependencies:'));
+      console.log(chalk.gray('       json_annotation: ^4.8.0'));
+      console.log(chalk.gray('     dev_dependencies:'));
+      console.log(chalk.gray('       build_runner: ^2.4.0'));
+      console.log(chalk.gray('       json_serializable: ^6.7.0'));
+      console.log(chalk.gray('  4. Run: dart run build_runner build\n'));
+    } else {
+      console.log(chalk.gray("  3. Add 'equatable' to your pubspec.yaml if not already present\n"));
+    }
 
   } finally {
     await client.close();
