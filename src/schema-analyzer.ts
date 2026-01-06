@@ -4,7 +4,7 @@ import { DartType, FieldInfo, SchemaInfo } from './types';
 
 export class SchemaAnalyzer {
   private nestedClassCounter = 0;
-  
+
   /**
    * Analyze documents and extract schema information
    */
@@ -22,8 +22,8 @@ export class SchemaAnalyzer {
     this.nestedClassCounter = 0;
 
     // Collect all fields across all documents with their actual values
-    const fieldOccurrences = new Map<string, { 
-      types: Set<DartType>; 
+    const fieldOccurrences = new Map<string, {
+      types: Set<DartType>;
       count: number;
       values: any[];
     }>();
@@ -85,12 +85,12 @@ export class SchemaAnalyzer {
         if (arrays.length > 0) {
           const allItems = arrays.flat();
           const itemTypes = new Set(allItems.map(item => this.detectDartType(item)));
-          
+
           // Check if all items are objects
-          const objectItems = allItems.filter(item => 
+          const objectItems = allItems.filter(item =>
             item != null && typeof item === 'object' && !Array.isArray(item)
           );
-          
+
           if (objectItems.length > 0 && objectItems.length === allItems.length) {
             // All items are objects, create a nested class
             const itemClassName = this.toNestedClassName(collectionName, this.toSingular(fieldName));
@@ -146,11 +146,29 @@ export class SchemaAnalyzer {
   }
 
   /**
+   * Get field summary from documents (for comparison purposes)
+   */
+  getFieldSummary(documents: admin.firestore.DocumentSnapshot[]): string[] {
+    const fieldNames = new Set<string>();
+
+    for (const doc of documents) {
+      const data = doc.data();
+      if (!data) continue;
+
+      for (const fieldName of Object.keys(data)) {
+        fieldNames.add(fieldName);
+      }
+    }
+
+    return Array.from(fieldNames).sort();
+  }
+
+  /**
    * Analyze nested objects and extract their schema
    */
   private analyzeNestedObjects(className: string, objects: any[]): SchemaInfo {
-    const fieldOccurrences = new Map<string, { 
-      types: Set<DartType>; 
+    const fieldOccurrences = new Map<string, {
+      types: Set<DartType>;
       count: number;
       values: any[];
     }>();
@@ -206,10 +224,10 @@ export class SchemaAnalyzer {
         const arrays = values.filter(v => Array.isArray(v) && v.length > 0);
         if (arrays.length > 0) {
           const allItems = arrays.flat();
-          const objectItems = allItems.filter(item => 
+          const objectItems = allItems.filter(item =>
             item != null && typeof item === 'object' && !Array.isArray(item)
           );
-          
+
           if (objectItems.length > 0 && objectItems.length === allItems.length) {
             const itemClassName = `${className}${this.toPascalCase(this.toSingular(fieldName))}`;
             const listItemSchema = this.analyzeNestedObjects(itemClassName, objectItems);

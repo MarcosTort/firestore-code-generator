@@ -1,7 +1,7 @@
-import * as fs from 'fs';
-import * as path from 'path';
-import * as yaml from 'js-yaml';
 import chalk from 'chalk';
+import * as fs from 'fs';
+import * as yaml from 'js-yaml';
+import * as path from 'path';
 
 export interface CLIConfig {
   firebase?: {
@@ -12,6 +12,7 @@ export interface CLIConfig {
   output?: {
     directory?: string;
     sampleSize?: number;
+    subcollectionSearchLimit?: number;
   };
 }
 
@@ -95,8 +96,8 @@ export class ConfigFileLoader {
       return resolved;
     }
     if (config?.firebase?.serviceAccount) {
-      const resolved = path.isAbsolute(config.firebase.serviceAccount) 
-        ? config.firebase.serviceAccount 
+      const resolved = path.isAbsolute(config.firebase.serviceAccount)
+        ? config.firebase.serviceAccount
         : path.resolve(process.cwd(), config.firebase.serviceAccount);
       return resolved;
     }

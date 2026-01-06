@@ -113,6 +113,7 @@ collections:
 output:
   directory: ./lib/src/models
   sampleSize: 20
+  subcollectionSearchLimit: 50  # Max parent docs to search for subcollections
 ```
 
 Copy from the example file:
@@ -198,6 +199,7 @@ Found 5 collection(s)
 
 ? Output directory for generated Dart files: ./lib/src/models
 ? Number of documents to sample per collection: 20
+? Maximum parent documents to search for subcollections: 50
 
 📋 Generation Summary:
 ────────────────────────────────────────────────────────────
@@ -207,6 +209,7 @@ Found 5 collection(s)
     └─ users: profiles, settings
   Output: ./lib/src/models
   Sample Size: 20 documents per collection
+  Subcollection Search Limit: 50 parent documents
 ────────────────────────────────────────────────────────────
 
 ? Generate Dart models with these settings? (Y/n) Yes

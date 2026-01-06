@@ -3,6 +3,14 @@ import * as admin from 'firebase-admin';
 import * as fs from 'fs';
 import * as path from 'path';
 
+export interface SubcollectionParentInfo {
+  parentId: string;
+  parentPath: string;
+  documentCount: number;
+  fieldCount: number;
+  sampleFields: string[];
+}
+
 export class FirestoreClient {
   private db: admin.firestore.Firestore | null = null;
   private initialized = false;
@@ -106,11 +114,15 @@ export class FirestoreClient {
 
   /**
    * Fetch sample documents from a subcollection
+   * Searches through parent documents to find one that has the subcollection
+   * If parentDocumentId is provided, fetches from that specific parent
    */
   async fetchSampleDocumentsFromSubcollection(
     parentCollectionPath: string,
     subcollectionName: string,
-    limit: number = 20
+    limit: number = 20,
+    subcollectionSearchLimit: number = 50,
+    parentDocumentId?: string
   ): Promise<admin.firestore.DocumentSnapshot[]> {
     if (!this.db) {
       throw new Error('Firestore not initialized');
@@ -118,10 +130,30 @@ export class FirestoreClient {
 
     console.log(chalk.blue(`Fetching subcollection ${subcollectionName} from ${parentCollectionPath}...`));
 
-    // Get a sample parent document
+    // If a specific parent document ID is provided, fetch from that parent
+    if (parentDocumentId) {
+      console.log(chalk.gray(`  Using specified parent document: ${parentDocumentId}`));
+
+      const parentDocRef = this.db.collection(parentCollectionPath).doc(parentDocumentId);
+      const subcollectionSnapshot = await parentDocRef
+        .collection(subcollectionName)
+        .limit(limit)
+        .get();
+
+      if (subcollectionSnapshot.empty) {
+        console.log(chalk.yellow(`⚠ No documents found in subcollection for parent: ${parentDocumentId}`));
+        return [];
+      }
+
+      console.log(chalk.green(`✓ Found ${subcollectionSnapshot.docs.length} document(s) in subcollection`));
+      return subcollectionSnapshot.docs;
+    }
+
+    // Otherwise, search through parent documents to find one with the subcollection
+    const searchLimit = Math.min(limit, subcollectionSearchLimit);
     const parentSnapshot = await this.db
       .collection(parentCollectionPath)
-      .limit(1)
+      .limit(searchLimit)
       .get();
 
     if (parentSnapshot.empty) {
@@ -129,22 +161,33 @@ export class FirestoreClient {
       return [];
     }
 
-    const parentDoc = parentSnapshot.docs[0];
-    console.log(chalk.gray(`  Using parent document: ${parentDoc.id}`));
+    console.log(chalk.gray(`  Searching through ${parentSnapshot.docs.length} parent document(s)...`));
 
-    // Get subcollection documents
-    const subcollectionSnapshot = await parentDoc.ref
-      .collection(subcollectionName)
-      .limit(limit)
-      .get();
+    // Search for a parent document that has this subcollection
+    for (const parentDoc of parentSnapshot.docs) {
+      const subcollectionSnapshot = await parentDoc.ref
+        .collection(subcollectionName)
+        .limit(1)
+        .get();
 
-    if (subcollectionSnapshot.empty) {
-      console.log(chalk.yellow(`⚠ No documents found in subcollection: ${subcollectionName}`));
-      return [];
+      if (!subcollectionSnapshot.empty) {
+        // Found a parent with this subcollection, now fetch all sample documents
+        console.log(chalk.gray(`  ✓ Found parent with subcollection: ${parentDoc.id}`));
+
+        const allSubcollectionDocs = await parentDoc.ref
+          .collection(subcollectionName)
+          .limit(limit)
+          .get();
+
+        console.log(chalk.green(`✓ Found ${allSubcollectionDocs.docs.length} document(s) in subcollection`));
+        return allSubcollectionDocs.docs;
+      }
     }
 
-    console.log(chalk.green(`✓ Found ${subcollectionSnapshot.docs.length} documents in subcollection`));
-    return subcollectionSnapshot.docs;
+    // No parent document had this subcollection
+    console.log(chalk.yellow(`⚠ No documents found in subcollection: ${subcollectionName}`));
+    console.log(chalk.yellow(`  Searched ${parentSnapshot.docs.length} parent document(s), none had this subcollection`));
+    return [];
   }
 
   /**
@@ -161,32 +204,40 @@ export class FirestoreClient {
 
   /**
    * Check if subcollection exists
+   * Searches through parent documents to find one that has the subcollection
    */
   async subcollectionExists(
     parentCollectionPath: string,
-    subcollectionName: string
+    subcollectionName: string,
+    subcollectionSearchLimit: number = 10
   ): Promise<boolean> {
     if (!this.db) {
       throw new Error('Firestore not initialized');
     }
 
-    // Get a sample parent document
+    // Get multiple parent documents to search
     const parentSnapshot = await this.db
       .collection(parentCollectionPath)
-      .limit(1)
+      .limit(subcollectionSearchLimit)
       .get();
 
     if (parentSnapshot.empty) {
       return false;
     }
 
-    const parentDoc = parentSnapshot.docs[0];
-    const subcollectionSnapshot = await parentDoc.ref
-      .collection(subcollectionName)
-      .limit(1)
-      .get();
+    // Search for a parent document that has this subcollection
+    for (const parentDoc of parentSnapshot.docs) {
+      const subcollectionSnapshot = await parentDoc.ref
+        .collection(subcollectionName)
+        .limit(1)
+        .get();
 
-    return !subcollectionSnapshot.empty;
+      if (!subcollectionSnapshot.empty) {
+        return true; // Found at least one parent with this subcollection
+      }
+    }
+
+    return false; // None of the parent documents had this subcollection
   }
 
   /**
@@ -265,6 +316,77 @@ export class FirestoreClient {
     }
 
     return Array.from(subcollectionsSet);
+  }
+
+  /**
+   * Analyze all parent documents that have a specific subcollection
+   * Returns information about each parent's subcollection schema
+   */
+  async analyzeSubcollectionParents(
+    parentCollectionPath: string,
+    subcollectionName: string,
+    sampleSize: number = 20,
+    searchLimit: number = 50
+  ): Promise<SubcollectionParentInfo[]> {
+    if (!this.db) {
+      throw new Error('Firestore not initialized');
+    }
+
+    console.log(chalk.blue(`\n📊 Analyzing parent documents for subcollection: ${subcollectionName}...`));
+
+    // Get parent documents to search
+    const parentSnapshot = await this.db
+      .collection(parentCollectionPath)
+      .limit(searchLimit)
+      .get();
+
+    if (parentSnapshot.empty) {
+      console.log(chalk.yellow(`⚠ No parent documents found in: ${parentCollectionPath}`));
+      return [];
+    }
+
+    const parentsWithSubcollection: SubcollectionParentInfo[] = [];
+
+    // Check each parent document for the subcollection
+    for (const parentDoc of parentSnapshot.docs) {
+      const subcollectionSnapshot = await parentDoc.ref
+        .collection(subcollectionName)
+        .limit(sampleSize)
+        .get();
+
+      if (!subcollectionSnapshot.empty) {
+        // Extract field names from subcollection documents
+        const fieldNames = new Set<string>();
+        for (const subDoc of subcollectionSnapshot.docs) {
+          const data = subDoc.data();
+          if (data) {
+            Object.keys(data).forEach(key => fieldNames.add(key));
+          }
+        }
+
+        const sampleFields = Array.from(fieldNames).sort();
+
+        parentsWithSubcollection.push({
+          parentId: parentDoc.id,
+          parentPath: parentDoc.ref.path,
+          documentCount: subcollectionSnapshot.docs.length,
+          fieldCount: sampleFields.length,
+          sampleFields,
+        });
+      }
+    }
+
+    if (parentsWithSubcollection.length === 0) {
+      console.log(chalk.yellow(`⚠ No parent documents found with subcollection: ${subcollectionName}`));
+      return [];
+    }
+
+    // Sort by field count (descending) to show most complete schemas first
+    parentsWithSubcollection.sort((a, b) => b.fieldCount - a.fieldCount);
+
+    console.log(chalk.green(`✓ Found ${parentsWithSubcollection.length} parent document(s) with subcollection`));
+
+    return parentsWithSubcollection;
   }
 
   /**

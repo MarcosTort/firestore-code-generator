@@ -14,7 +14,7 @@ export interface SchemaInfo {
   nestedClasses?: SchemaInfo[]; // All nested class definitions
 }
 
-export type DartType = 
+export type DartType =
   | 'String'
   | 'int'
   | 'double'
@@ -70,6 +70,7 @@ export interface CLIConfig {
   output?: {
     directory?: string;
     sampleSize?: number;
+    subcollectionSearchLimit?: number;
   };
 }
 

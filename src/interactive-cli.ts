@@ -201,8 +201,26 @@ export async function runInteractiveCLI(
       },
     ]);
 
+    // Configure subcollection search limit (with default from config)
+    const { subcollectionSearchLimit } = await inquirer.prompt([
+      {
+        type: 'number',
+        name: 'subcollectionSearchLimit',
+        message: 'Maximum parent documents to search for subcollections:',
+        default: config?.output?.subcollectionSearchLimit || 50,
+        validate: (input: any) => {
+          const num = Number(input);
+          if (isNaN(num) || num < 1) {
+            return 'Subcollection search limit must be at least 1';
+          }
+          return true;
+        },
+      },
+    ]);
+
     // Detect and ask about subcollections (using the sample size)
     const collectionsWithSubs: Map<string, string[]> = new Map();
+    const subcollectionParentIds: Map<string, Map<string, string>> = new Map(); // collection -> subcollection -> parentId
 
     console.log(chalk.blue('\n🌳 Checking for subcollections...\n'));
     for (const collection of selectedCollections) {
@@ -223,6 +241,56 @@ export async function runInteractiveCLI(
 
         if (includeSubcollections) {
           collectionsWithSubs.set(collection, subcollections);
+
+          // Analyze parent documents for each subcollection
+          const parentSelections = new Map<string, string>();
+
+          for (const subcollection of subcollections) {
+            const parentInfos = await client.analyzeSubcollectionParents(
+              collection,
+              subcollection,
+              sampleSize,
+              subcollectionSearchLimit
+            );
+
+            if (parentInfos.length === 0) {
+              console.log(chalk.yellow(`  ⚠ No parent documents found with subcollection: ${subcollection}`));
+              continue;
+            }
+
+            if (parentInfos.length === 1) {
+              // Only one parent found, use it automatically
+              console.log(chalk.gray(`  ✓ Using parent document: ${parentInfos[0].parentId}`));
+              parentSelections.set(subcollection, parentInfos[0].parentId);
+            } else {
+              // Multiple parents found, let user choose
+              console.log(chalk.cyan(`\n  Found ${parentInfos.length} parent documents with '${subcollection}':\n`));
+
+              parentInfos.forEach((info, index) => {
+                const fieldsPreview = info.sampleFields.slice(0, 5).join(', ');
+                const moreFields = info.sampleFields.length > 5 ? `, +${info.sampleFields.length - 5} more` : '';
+                console.log(chalk.gray(`  ${index + 1}. ${info.parentId} → ${info.fieldCount} fields (${fieldsPreview}${moreFields})`));
+              });
+
+              const { selectedParentIndex } = await inquirer.prompt([
+                {
+                  type: 'list',
+                  name: 'selectedParentIndex',
+                  message: `  Which parent document has the best schema for '${subcollection}'?`,
+                  choices: parentInfos.map((info, index) => ({
+                    name: `${info.parentId} (${info.fieldCount} fields)${index === 0 ? ' - recommended' : ''}`,
+                    value: index,
+                  })),
+                  default: 0,
+                },
+              ]);
+
+              parentSelections.set(subcollection, parentInfos[selectedParentIndex].parentId);
+              console.log(chalk.green(`  ✓ Selected: ${parentInfos[selectedParentIndex].parentId}\n`));
+            }
+          }
+
+          subcollectionParentIds.set(collection, parentSelections);
         }
         console.log('');
       } else {
@@ -246,6 +314,7 @@ export async function runInteractiveCLI(
 
     console.log(chalk.white(`  Output: ${outputDirectory}`));
     console.log(chalk.white(`  Sample Size: ${sampleSize} documents per collection`));
+    console.log(chalk.white(`  Subcollection Search Limit: ${subcollectionSearchLimit} parent documents`));
     console.log(chalk.gray('─'.repeat(60)));
 
     const { confirmGeneration } = await inquirer.prompt([
@@ -295,30 +364,57 @@ export async function runInteractiveCLI(
 
       // Process subcollections
       const subcollections = collectionsWithSubs.get(collection) || [];
+      const parentSelections = subcollectionParentIds.get(collection);
+
       for (const subcollection of subcollections) {
         console.log(chalk.bold(`\n📦 Processing subcollection: ${collection}/${subcollection}`));
 
-        const subExists = await client.subcollectionExists(collection, subcollection);
-        if (!subExists) {
-          console.log(chalk.yellow(`  ⚠ No documents found, skipping\n`));
-          continue;
+        const selectedParentId = parentSelections?.get(subcollection);
+
+        // If we have a selected parent ID, use it directly
+        if (selectedParentId) {
+          const subDocs = await client.fetchSampleDocumentsFromSubcollection(
+            collection,
+            subcollection,
+            sampleSize,
+            subcollectionSearchLimit,
+            selectedParentId
+          );
+
+          if (subDocs.length === 0) {
+            console.log(chalk.yellow(`  ⚠ No documents found, skipping\n`));
+            continue;
+          }
+
+          const subSchema = analyzer.analyzeDocuments(subcollection, subDocs);
+          const subFilePath = await generator.writeModelToFile(subSchema, outputPath);
+          generatedFiles.push(subFilePath);
+          console.log('');
+        } else {
+          // Fallback to old behavior if no parent was selected
+          const subExists = await client.subcollectionExists(collection, subcollection, subcollectionSearchLimit);
+          if (!subExists) {
+            console.log(chalk.yellow(`  ⚠ No documents found, skipping\n`));
+            continue;
+          }
+
+          const subDocs = await client.fetchSampleDocumentsFromSubcollection(
+            collection,
+            subcollection,
+            sampleSize,
+            subcollectionSearchLimit
+          );
+
+          if (subDocs.length === 0) {
+            console.log(chalk.yellow(`  ⚠ No documents found, skipping\n`));
+            continue;
+          }
+
+          const subSchema = analyzer.analyzeDocuments(subcollection, subDocs);
+          const subFilePath = await generator.writeModelToFile(subSchema, outputPath);
+          generatedFiles.push(subFilePath);
+          console.log('');
         }
-
-        const subDocs = await client.fetchSampleDocumentsFromSubcollection(
-          collection,
-          subcollection,
-          sampleSize
-        );
-
-        if (subDocs.length === 0) {
-          console.log(chalk.yellow(`  ⚠ No documents found, skipping\n`));
-          continue;
-        }
-
-        const subSchema = analyzer.analyzeDocuments(subcollection, subDocs);
-        const subFilePath = await generator.writeModelToFile(subSchema, outputPath);
-        generatedFiles.push(subFilePath);
-        console.log('');
       }
     }
 
