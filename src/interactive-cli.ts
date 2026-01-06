@@ -264,11 +264,7 @@ export async function runInteractiveCLI(
               console.log(chalk.gray(`  ✓ Using parent document: ${parentInfos[0].parentId}`));
               parentSelections.set(subcollection, parentInfos[0].parentId);
             } else {
-              // Multiple parents found, let user choose
               console.log(chalk.cyan(`\n  Found ${parentInfos.length} parent documents with '${subcollection}'\n`));
-
-              // Debug: log parent info structure
-              console.log(chalk.gray(`  Debug: First parent info:`, JSON.stringify(parentInfos[0], null, 2)));
 
               const choices = parentInfos.map((info, index) => {
                 const fieldsPreview = info.sampleFields && info.sampleFields.length > 0
@@ -279,21 +275,16 @@ export async function runInteractiveCLI(
                   : '';
                 const recommended = index === 0 ? ' ⭐' : '';
 
-                const choiceName = `${info.parentId} (${info.fieldCount} fields: ${fieldsPreview}${moreFields})${recommended}`;
-                console.log(chalk.gray(`  Debug: Choice ${index}: ${choiceName}`));
-
                 return {
-                  name: choiceName,
+                  name: `${info.parentId} (${info.fieldCount} fields: ${fieldsPreview}${moreFields})${recommended}`,
                   value: index,
                   short: info.parentId,
                 };
               });
 
-              console.log(chalk.gray(`  Debug: Total choices: ${choices.length}`));
-
               const { selectedParentIndex } = await inquirer.prompt([
                 {
-                  type: 'list',
+                  type: 'rawlist',
                   name: 'selectedParentIndex',
                   message: `  Select parent document for '${subcollection}':`,
                   choices: choices,
